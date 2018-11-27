@@ -58,3 +58,46 @@ __attribute__((always_inline)) static void KeyExpansion(uint8_t Round10Key[16]) 
     aes128_key_schedule_inv_round(Round10Key, RCON[i]);
   }
 }
+
+__attribute__((always_inline)) __m128i aes128_key_schedule_inv_round_fast(__m128i round_key, uint8_t rcon)
+{
+  uint_fast8_t    round;
+  uint8_t *p_key = (uint8_t *) &round_key;
+  uint8_t *p_key_0 = p_key + 12; // Get last 4 Bytes
+  uint8_t *p_key_m1 = p_key_0 - 4; // Get last 8 Bytes
+
+  #pragma clang loop vectorize(enable)
+  for (round = 1; round < 4; ++round)
+  {
+    /* XOR in previous word */
+    p_key_0[0] ^= p_key_m1[0];
+    p_key_0[1] ^= p_key_m1[1];
+    p_key_0[2] ^= p_key_m1[2];
+    p_key_0[3] ^= p_key_m1[3];
+
+    p_key_0 = p_key_m1;
+    p_key_m1 -= 4;
+  }
+
+  /* Rotate previous word and apply S-box. Also XOR Rcon for first byte. */
+  p_key_m1 = p_key + 12;
+  p_key_0[0] ^= AES_SBOX[p_key_m1[1]] ^ rcon;
+  p_key_0[1] ^= AES_SBOX[p_key_m1[2]];
+  p_key_0[2] ^= AES_SBOX[p_key_m1[3]];
+  p_key_0[3] ^= AES_SBOX[p_key_m1[0]];  
+
+  return round_key;
+}
+
+__attribute__((always_inline)) static void KeyExpansionFast(__m128i key_schedule[20]) {
+  key_schedule[9] = aes128_key_schedule_inv_round_fast(key_schedule[10], 54);
+  key_schedule[8] = aes128_key_schedule_inv_round_fast(key_schedule[9], 27);
+  key_schedule[7] = aes128_key_schedule_inv_round_fast(key_schedule[8], 128);
+  key_schedule[6] = aes128_key_schedule_inv_round_fast(key_schedule[7], 64);
+  key_schedule[5] = aes128_key_schedule_inv_round_fast(key_schedule[6], 32);
+  key_schedule[4] = aes128_key_schedule_inv_round_fast(key_schedule[5], 16);
+  key_schedule[3] = aes128_key_schedule_inv_round_fast(key_schedule[4], 8);
+  key_schedule[2] = aes128_key_schedule_inv_round_fast(key_schedule[3], 4);
+  key_schedule[1] = aes128_key_schedule_inv_round_fast(key_schedule[2], 2);
+  key_schedule[0] = aes128_key_schedule_inv_round_fast(key_schedule[1], 1);  
+}

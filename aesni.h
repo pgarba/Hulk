@@ -44,7 +44,6 @@ __attribute__((always_inline)) static __m128i aes_128_key_expansion(__m128i key,
     return _mm_xor_si128(key, keygened);
 }
 
-//public API
 __attribute__((always_inline)) static void aes128_load_key_enc_only(const uint8_t *enc_key, __m128i *key_schedule){
     key_schedule[0] = _mm_loadu_si128((const __m128i*) enc_key);
     key_schedule[1]  = AES_128_key_exp(key_schedule[0], 0x01);
@@ -57,6 +56,18 @@ __attribute__((always_inline)) static void aes128_load_key_enc_only(const uint8_
     key_schedule[8]  = AES_128_key_exp(key_schedule[7], 0x80);
     key_schedule[9]  = AES_128_key_exp(key_schedule[8], 0x1B);
     key_schedule[10] = AES_128_key_exp(key_schedule[9], 0x36);
+}
+
+__attribute__((always_inline)) static void aes128_load_dec_only(__m128i *key_schedule){
+    key_schedule[11] = _mm_aesimc_si128(key_schedule[9]);
+    key_schedule[12] = _mm_aesimc_si128(key_schedule[8]);
+    key_schedule[13] = _mm_aesimc_si128(key_schedule[7]);
+    key_schedule[14] = _mm_aesimc_si128(key_schedule[6]);
+    key_schedule[15] = _mm_aesimc_si128(key_schedule[5]);
+    key_schedule[16] = _mm_aesimc_si128(key_schedule[4]);
+    key_schedule[17] = _mm_aesimc_si128(key_schedule[3]);
+    key_schedule[18] = _mm_aesimc_si128(key_schedule[2]);
+    key_schedule[19] = _mm_aesimc_si128(key_schedule[1]);
 }
 
 __attribute__((always_inline)) static void aes128_load_key(const uint8_t *enc_key, __m128i *key_schedule){
