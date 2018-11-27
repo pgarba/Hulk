@@ -282,7 +282,7 @@ int main(int argc, char **argv) {
   uint8_t ciphertext[16] = {0};
   uint8_t key[16] = {0};
 
-  printf("AES Key tester v0.1 (pgarba 2018)\n");
+  printf("Hulk v0.1 (pgarba 2018)\n");
   if (argc < 5) {
     printf("Usage: %s mode<Enc e | Dec d> <In> <Out> <key> <keyschduleRound:opt>\n", argv[0]);
     return 1;  
