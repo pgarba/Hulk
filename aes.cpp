@@ -300,8 +300,14 @@ int main(int argc, char **argv) {
   
   parseInput(argv[2], plaintext);
   parseInput(argv[3], ciphertext);  
+  
+  // parse key and keep ??
   parseKey(argv[4], key);  
-
+  std::string StrKey = argv[4];
+  for (auto &c : StrKey) {
+    c = std::toupper(c);
+  }
+  
    if (argc == 6) {
     KeyScheduleRound = atoi(argv[5]);
     printf("[*] Round           : %i\n", KeyScheduleRound);
@@ -315,7 +321,7 @@ int main(int argc, char **argv) {
 
 
   printf("[*] Key             : ");
-  phex(key);
+  printf("%s\n", StrKey.c_str());
 
   printf("[*] Input           : ");
   phex(plaintext);
