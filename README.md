@@ -23,7 +23,7 @@ Hulk makes use of the AES-NI extension to bruteforce up to 6 missing bytes of AE
 
 Compile and test with the given script ./build_and_test.sh or by using clang:
 
-	clang++-7 aes.cpp -O3 -march=native -fms-extensions -o hulk -lpthread -g
+	clang++-7 hulk.cpp -O3 -march=native -fms-extensions -o hulk -lpthread -g
 
 
 # Usage
