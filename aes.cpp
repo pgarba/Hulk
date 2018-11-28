@@ -4,12 +4,10 @@
 #include <vector>
 #include <cmath>
 #include <thread>
+#include <smmintrin.h>
 
 // aes ni
 #include "aesni.h"
-
-// key schedule to get round 0 key from round 10 key
-#include "keyschedule.h"
 
 typedef struct {
   int ThreadID;
@@ -193,46 +191,56 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
   // Bruteforce threads
   bool Finished = false;
   std::vector<std::thread> workers;  
-  for (auto &R : Ranges) {    
+  for (auto R : Ranges) {    
     // Encryption Thread
     if (Enc) {
-      workers.push_back(std::thread([&]() {
-      uint8_t I[16] = {0};
-      uint8_t KeyThread[16] = {0};
+      workers.push_back(std::thread([&]() {            
+      __m128i key_schedule[11];
       
-      // Bruteforce
-      for (uint64_t i=R.Min; i<=R.Max; i++) {
-        if (Finished)
-          return;
+      uint64_t RMin = R.Min;
+      uint64_t RMax = R.Max;
 
-        // Set input key
-        memcpy(KeyThread, IKey, 16);        
-        memcpy(I, Input, 16);        
-        
+      __m128i Expected128 = _mm_loadu_si128((__m128i *) Expected);
+      __m128i Input128 = _mm_loadu_si128((__m128i *) Input);      
+
+      // Set input key
+      uint8_t KeyThread[16] = {0};      
+      memcpy(KeyThread, IKey, 16);      
+
+      // Bruteforce
+      for (uint64_t i=RMin; i<=RMax; i++) {              
         // Set bruteforced bytes
         for (auto &B : MissingBytes) {
           KeyThread[B.Index] = (uint8_t) ((i >> B.Shift));
         }        
                                 
-        EncryptNI(I, KeyThread);               
+        //EncryptNI(I, KeyThread);            
+        aes128_load_key_enc_only(KeyThread, key_schedule);        
+        __m128i Ciphertext128 = aes128_enc_fast(key_schedule, Input128);
 
-        // Compare if result found
-        if (CompareResult(I, Expected) == true) {          
+        // Compare if result found                    
+        __m128i neq = _mm_xor_si128(Ciphertext128, Expected128);
+        if(_mm_test_all_zeros(neq,neq)) {
             // Key found
-            Finished = true;
+            Finished = true;            
 
-            printf("[!] T%02i Key found    : ", R.ThreadID);
+            printf("[!] T%02i Key found   : ", R.ThreadID);
             memcpy(IKey, KeyThread, 16);
             phex(IKey);                          
             return;
           }
+
+        // Check if finished
+        if (Finished) {          
+          return;                  
+        }
       }      
     }));
     } else {
       // Decryption Thread
-      workers.push_back(std::thread([&]() {
-      uint8_t I[16] = {0};          
+      workers.push_back(std::thread([&]() {      
       __m128i key_schedule_fast[20];
+
       uint8_t *KeyThread;
       if (Round != 0) {
       	KeyThread = (uint8_t *) &key_schedule_fast[10];
@@ -240,46 +248,52 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
       	KeyThread = (uint8_t *) &key_schedule_fast[0];
       }
       memcpy(KeyThread, IKey, 16);
-      
-      // Bruteforce
-      for (uint64_t i=R.Min; i<=R.Max; i++) {
-        if (Finished)
-          return;
 
-        // Set input key              
-        memcpy(I, Input, 16);        
-        
+      __m128i Expected128 = _mm_loadu_si128((__m128i *) Expected);
+      __m128i Input128 = _mm_loadu_si128((__m128i *) Input);
+      
+      uint64_t RMin = R.Min;
+      uint64_t RMax = R.Max;    
+
+      // Bruteforce
+      for (uint64_t i=RMin; i<=RMax; i++) {          
         // Set bruteforced bytes
         for (auto &B : MissingBytes) {
           KeyThread[B.Index] = (uint8_t) ((i >> B.Shift));
         }        
               
         // Attack Round 10 on decryption if needed
+        __m128i Ciphertext128;
         if (Round > 0) {     
           KeyExpansionFast(key_schedule_fast);
           aes128_load_dec_only(key_schedule_fast);
-          DecryptNI_fast(I, key_schedule_fast);
+          Ciphertext128 = aes128_dec_fast(key_schedule_fast, Input128);
         } else {                                   
-          DecryptNI(I, KeyThread);   
+          aes128_load_dec_only(key_schedule_fast);
+          Ciphertext128 = aes128_dec_fast(key_schedule_fast, Input128);
         }        
 
         // Compare if result found
-        if (CompareResult(I, Expected) == true) {          
+        __m128i neq = _mm_xor_si128(Ciphertext128, Expected128);
+        if(_mm_test_all_zeros(neq,neq)) {          
             // Key found
             Finished = true;
 
-            printf("[!] T%i Key found : ", R.ThreadID);
+            printf("[!] T%02i Key found   : ", R.ThreadID);
             if (Round > 0) {              
               memcpy(IKey, &key_schedule_fast[0], 16);
               phex(IKey);   
-              printf("[!] Round 10 Key: ");  
+              printf("[!] Round 10 Key    : ");  
               phex((uint8_t *) &key_schedule_fast[10]);                   
             } else {
               memcpy(IKey, KeyThread, 16);
               phex(IKey);     
             }            
             return;
-          }
+        }
+
+        if (Finished)
+          return;
       }      
     }));
     }

@@ -18,9 +18,9 @@ Threadripper 1950x (2 AES NI Units per Core)
 
 Core i7-6700k @ 4ghz (1 AES NI Unit per Core)
 
-32 bit - aes ni 4 threads : real 0m20.776s
+32 bit - aes ni 4 threads : real 0m13.432s
 
-32 bit - aes ni 8 threads : real 0m29.173
+32 bit - aes ni 8 threads : real 0m15.999s
 
 
 # Installation
