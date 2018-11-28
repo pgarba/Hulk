@@ -160,7 +160,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
   uint64_t V=0;
   uint64_t Max = (uint64_t) ((std::pow(2, MissingBytes.size() *8)) - 1);      
 
-  const int AESNI_Threads = std::thread::hardware_concurrency();
+  const int AESNI_Threads = std::thread::hardware_concurrency() / 2;
   uint64_t Step = (Max) / AESNI_Threads;
   uint64_t Min = 0;
 
