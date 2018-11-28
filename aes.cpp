@@ -309,7 +309,7 @@ int main(int argc, char **argv) {
   uint8_t ciphertext[16] = {0};
   uint8_t key[16] = {0}; 
 
-  printf("Hulk v1.1 (Peter Garba 2018)\n");
+  printf("Hulk v1.2 (Peter Garba 2018)\n");
   if (argc < 5) {
     printf("Usage: %s mode<Enc e | Dec d> <In> <Out> <key> <keyschduleRound:opt>\n", argv[0]);
     return 1;  
