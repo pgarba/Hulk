@@ -147,17 +147,14 @@ static void parseKey(char *I, uint8_t *Out) {
 }
 
 static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expected[16], uint8_t IKey[16], bool Enc, int Round=0) {  
-  printf("\nMissing Bytes (%li):\n", MissingBytes.size());
-
   int B = 0;
   for (auto &BB : MissingBytes) {
-    printf("[*] Byte %i\n", B++);
-    printf("[*] Index %i\n", BB.Index);        
+    printf("[*] Byte %i ", B++);
+    printf("Index %i\n", BB.Index);          
   }  
-  printf("\n");
 
-  if (MissingBytes.size() > 5) {
-    printf("[!] Too many missing bytes! (5 max)");
+  if (MissingBytes.size() > 7) {
+    printf("[!] Too many missing bytes! (7 max)");
     return;
   }
 
@@ -169,9 +166,9 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
   uint64_t Step = (Max) / AESNI_Threads;
   uint64_t Min = 0;
 
-  printf("[*] AES-NI Units: %i\n", AESNI_Threads);
-  printf("[*] Range       : %08lX - %08lX\n", Min, Max);  
-  printf("[*] Step        : %08lX\n", Step);
+  printf("[*] AES-NI Units    : %i\n", AESNI_Threads);
+  printf("[*] Range           : %08lX - %08lX\n", Min, Max);  
+  printf("[*] Step            : %08lX\n", Step);
   
   for (int i=0;i<AESNI_Threads;i++) {
     Range R;
@@ -190,7 +187,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
   int TID = 0;
   for (auto &R : Ranges) {
     R.ThreadID = TID++;
-    printf("[*] T%i Range       : %08lX - %08lX\n", R.ThreadID,R.Min,R.Max);
+    printf("[*] T%02i Range       : %08lX - %08lX\n", R.ThreadID,R.Min,R.Max);
   }
  
   // Bruteforce threads
@@ -216,8 +213,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
         for (auto &B : MissingBytes) {
           KeyThread[B.Index] = (uint8_t) ((i >> B.Shift));
         }        
-            
-        // Encrypt or decrcypt                    
+                                
         EncryptNI(I, KeyThread);               
 
         // Compare if result found
@@ -225,7 +221,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
             // Key found
             Finished = true;
 
-            printf("[!] T%i Key found : ", R.ThreadID);
+            printf("[!] T%02i Key found    : ", R.ThreadID);
             memcpy(IKey, KeyThread, 16);
             phex(IKey);                          
             return;
@@ -235,10 +231,14 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
     } else {
       // Decryption Thread
       workers.push_back(std::thread([&]() {
-      uint8_t I[16] = {0};
-      //uint8_t KeyThread[16] = {0};            
+      uint8_t I[16] = {0};          
       __m128i key_schedule_fast[20];
-      uint8_t *KeyThread = (uint8_t *) &key_schedule_fast[10];
+      uint8_t *KeyThread;
+      if (Round != 0) {
+      	KeyThread = (uint8_t *) &key_schedule_fast[10];
+      } else {
+      	KeyThread = (uint8_t *) &key_schedule_fast[0];
+      }
       memcpy(KeyThread, IKey, 16);
       
       // Bruteforce
@@ -253,16 +253,14 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
         for (auto &B : MissingBytes) {
           KeyThread[B.Index] = (uint8_t) ((i >> B.Shift));
         }        
-            
-        // Encrypt or decrcypt    
+              
         // Attack Round 10 on decryption if needed
         if (Round > 0) {     
           KeyExpansionFast(key_schedule_fast);
           aes128_load_dec_only(key_schedule_fast);
           DecryptNI_fast(I, key_schedule_fast);
-        } else {
-          //KeyExpansion(KeyThread);                                     
-          //DecryptNI(I, KeyThread);   
+        } else {                                   
+          DecryptNI(I, KeyThread);   
         }        
 
         // Compare if result found
@@ -275,7 +273,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
               memcpy(IKey, &key_schedule_fast[0], 16);
               phex(IKey);   
               printf("[!] Round 10 Key: ");  
-              phex(KeyThread);                   
+              phex((uint8_t *) &key_schedule_fast[10]);                   
             } else {
               memcpy(IKey, KeyThread, 16);
               phex(IKey);     
@@ -292,60 +290,15 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
         t.join();                    
     };
 }
-/*
-  Test faster key expension
-*/
-void TestKey() {
-  uint8_t I[16]  = { 0};
-  uint8_t Round0[16] = { 0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11 ,0x11};
-  __m128i key_schedule[20] = { 0 };
-  __m128i key_schedule_fast[20] = { 0 };
-  
-  aes128_load_key(Round0, key_schedule);  
-  
-
-  //copy round 10
-  memcpy((uint8_t *) &key_schedule_fast[10], (uint8_t *) &key_schedule[10], 16 );
-
-  for (int i=0;i<20;i++) {
-    printf("%02i ", i);
-    phex((uint8_t *) &key_schedule[i]);
-  }
-
-  memcpy(I, Round0, 16);
-  DecryptNI(I, Round0);
-  phex(I);
-  
-  printf("\n");
-
-  KeyExpansionFast(key_schedule_fast);
-  aes128_load_dec_only(key_schedule_fast);
-
-  for (int i=0;i<20;i++) {
-    printf("%02i ", i);
-    phex((uint8_t *) &key_schedule_fast[i]);
-  }
-  
-  memcpy(I, Round0, 16);
-  DecryptNI_fast(I, key_schedule_fast);
-  phex(I);
-}
-
-
 
 int main(int argc, char **argv) {
   bool Enc = true;
   int KeyScheduleRound = 0;
   uint8_t plaintext[16] = {0};
   uint8_t ciphertext[16] = {0};
-  uint8_t key[16] = {0};
+  uint8_t key[16] = {0}; 
 
-  /*
-  TestKey();
-  return 0;
-  */
-
-  printf("Hulk v0.11 (pgarba 2018)\n");
+  printf("Hulk v1.0 (Peter Garba 2018)\n");
   if (argc < 5) {
     printf("Usage: %s mode<Enc e | Dec d> <In> <Out> <key> <keyschduleRound:opt>\n", argv[0]);
     return 1;  
@@ -363,6 +316,7 @@ int main(int argc, char **argv) {
   
   parseInput(argv[2], plaintext);
   parseInput(argv[3], ciphertext);  
+
   // parse key and keep ??
   parseKey(argv[4], key);  
   std::string StrKey = argv[4];
@@ -372,27 +326,27 @@ int main(int argc, char **argv) {
 
    if (argc == 6) {
     KeyScheduleRound = atoi(argv[5]);
-    printf("[*] KeySchedule Round: %i\n", KeyScheduleRound);
-  }
+    printf("[*] Round           : %i\n", KeyScheduleRound); 
+   }
  
-  printf("[*] Mode:       ");
+  printf("[*] Mode            : ");
   if (Enc == true)
     printf("Encryption\n");
   else
     printf("Decryption\n");
 
 
-  printf("[*] Key:        ");
+  printf("[*] Key             : ");
   printf("%s\n", StrKey.c_str());
 
-  printf("[*] Input:      ");
+  printf("[*] Input           : ");
   phex(plaintext);
 
-  printf("[*] Expected:   ");
+  printf("[*] Expected        : ");
   phex(ciphertext);
 
   if (MissingBytes.size() > 0) {
-    printf("\n[!] Bruteforce: %li missing bytes\n", MissingBytes.size());
+    printf("[!] Bruteforce      : %li missing bytes\n", MissingBytes.size());
     BruteforceMissingBytes(plaintext, ciphertext, key, Enc, KeyScheduleRound);
   }
 
@@ -408,7 +362,7 @@ int main(int argc, char **argv) {
     DecryptNI(plaintext, key);
   }
 
-  printf("[*] Output:     ");
+  printf("[*] Output          : ");
   phex(plaintext);
 
   bool R = CompareResult(plaintext, ciphertext);
