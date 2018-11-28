@@ -86,26 +86,6 @@ static void parseInput(char *I, uint8_t *Out) {
   }
 }
 
-__attribute__((always_inline)) static bool CompareResult(const uint8_t *A, const uint8_t *B) {
-  return !memcmp(A,B,16);
-}
-
-__attribute__((always_inline)) static void EncryptNI(uint8_t *I, const uint8_t *K) {
-  __m128i key_schedule[11];
-  aes128_load_key_enc_only(K,key_schedule);
-  aes128_enc(key_schedule,I,I);    
-}
-
-__attribute__((always_inline)) static void DecryptNI(uint8_t *I, const uint8_t *K) {  
-  __m128i key_schedule[20];
-  aes128_load_key(K,key_schedule);
-  aes128_dec(key_schedule,I,I);
-}
-
-__attribute__((always_inline)) static void DecryptNI_fast(uint8_t *I, __m128i key_schedule[20]) {      
-  aes128_dec(key_schedule,I,I);
-}
-
 static void parseKey(char *I, uint8_t *Out) {
   int n=0;
   const uint8_t *p;
@@ -142,6 +122,22 @@ static void parseKey(char *I, uint8_t *Out) {
         }
       }      
   }
+}
+
+__attribute__((always_inline)) static bool CompareResult(const uint8_t *A, const uint8_t *B) {
+  return !memcmp(A,B,16);
+}
+
+__attribute__((always_inline)) static void EncryptNI(uint8_t *I, const uint8_t *K) {
+  __m128i key_schedule[11];
+  aes128_load_key_enc_only(K,key_schedule);
+  aes128_enc(key_schedule,I,I);    
+}
+
+__attribute__((always_inline)) static void DecryptNI(uint8_t *I, const uint8_t *K) {  
+  __m128i key_schedule[20];
+  aes128_load_key(K,key_schedule);
+  aes128_dec(key_schedule,I,I);
 }
 
 static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expected[16], uint8_t IKey[16], bool Enc, int Round=0) {  
@@ -213,8 +209,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
         for (auto &B : MissingBytes) {
           KeyThread[B.Index] = (uint8_t) ((i >> B.Shift));
         }        
-                                
-        //EncryptNI(I, KeyThread);            
+                                        
         aes128_load_key_enc_only(KeyThread, key_schedule);        
         __m128i Ciphertext128 = aes128_enc_fast(key_schedule, Input128);
 
@@ -261,7 +256,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
         __m128i Ciphertext128;
         if (Round > 0) {     
           key_schedule_fast[10] = _mm_loadu_si128((const __m128i*) KeyThread);
-          KeyExpansionFast(key_schedule_fast);
+          KeyExpansionINV_Fast(key_schedule_fast);
           aes128_load_dec_only(key_schedule_fast);
           Ciphertext128 = aes128_dec_fast(key_schedule_fast, Input128);
         } else {                               
@@ -363,7 +358,7 @@ int main(int argc, char **argv) {
 
   if (MissingBytes.size() == 0 && KeyScheduleRound > 0) {
     __m128i key_schedule_fast[20];
-    KeyExpansionFast(key_schedule_fast);
+    KeyExpansionINV_Fast(key_schedule_fast);
     memcpy(key, &key_schedule_fast[0], 16);    
   }
 
