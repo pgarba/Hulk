@@ -191,7 +191,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
   // Bruteforce threads
   bool Finished = false;
   std::vector<std::thread> workers;  
-  for (auto R : Ranges) {    
+  for (auto &R : Ranges) {    
     // Encryption Thread
     if (Enc) {
       workers.push_back(std::thread([&]() {            
