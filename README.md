@@ -2,24 +2,24 @@
 
 Hulk is able to bruteforce missing bytes after a DCA attack on AES with his special ability of AES-NI
 
-Hulk makes use of the AES-NI extension to bruteforce up to 6 missing bytes of AES. If you are lucky to own
+Hulk makes use of the AES-NI extension to bruteforce up to 6 missing bytes of AES. If you are lucky to own  
 a Threadripper 1950x, Hulk will use 2 AES-NI engines per core which makes the attack really fast.
 
 
-# Numbers
+# Numbers for AES Decryption Round 10 Key
 
-Threadripper 1950x (2 AES NI Units per Core)
+#### Threadripper 1950x (2 AES NI Units per Core)
 
-32 bit - aes ni 32 threads : 1.2s
-
-40 bit - aes ni 32 threads : 5.17m
-
+32 bit - aes ni 32 threads : 1.2s  
+40 bit - aes ni 32 threads : 5.17m  
 48 bit - aes ni 32 threads : ~23h
 
-Core i7-6700k @ 4ghz (1 AES NI Unit per Core)
+#### Core i7-6700k @ 4ghz (1 AES NI Unit per Core)  
 
-32 bit - aes ni 4 threads : real 0m13.432s
+	For CPUS with only one AES NI engine please change the AESNI_Threads in aes.cpp to AESNI_Threads / 2  
+	So far I didn't figure out how to detect the amount of AES-NI engines per core!
 
+32 bit - aes ni 4 threads : real 0m12.053s  
 32 bit - aes ni 8 threads : real 0m15.999s
 
 
@@ -27,24 +27,21 @@ Core i7-6700k @ 4ghz (1 AES NI Unit per Core)
 
 Compile and test with the given script ./build_and_test.sh or by using clang:
 
-clang++-7 aes.cpp -O3 -march=native -fms-extensions -o hulk -lpthread -g
+	clang++-7 aes.cpp -O3 -march=native -fms-extensions -o hulk -lpthread -g
 
 
 # Usage
 
-./hulk e|d input output key 10:Optional
+#### ./hulk e|d input output key 10:Optional
 
-e|d         - Attack (e) encryption or (d) decryption
-
-input       - The to input to the AES whitebox
-
-output      - The output of the AES whitebox
-	
-key         - The partial key retrieved by the DCA attack
+e|d         - Attack (e) encryption or (d) decryption  
+input       - The to input to the AES whitebox  
+output      - The output of the AES whitebox  
+key         - The partial key retrieved by the DCA attack  
 
               Mark the missing bytes with '??'
 								
-10:Optional - Handle the key as a round 10 key
+10:Optional - Handle the key as a round 10 key  
 
               Hulk will calculate the round 0 key and test it against the given test vector 
 								
@@ -52,7 +49,7 @@ key         - The partial key retrieved by the DCA attack
 
 # Example
 
-time ./hulk d 00000000000000000000000000000000 ac589cfe8a7ae5dd875d9786e5832400 462f8e8e6ec0fe2b1d63????9f7f???? 10
+#### time ./hulk d 00000000000000000000000000000000 ac589cfe8a7ae5dd875d9786e5832400 462f8e8e6ec0fe2b1d63????9f7f???? 10
 
 AES Key tester v0.1 (pgarba 2018)
 
