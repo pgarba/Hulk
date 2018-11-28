@@ -268,8 +268,8 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
           KeyExpansionFast(key_schedule_fast);
           aes128_load_dec_only(key_schedule_fast);
           Ciphertext128 = aes128_dec_fast(key_schedule_fast, Input128);
-        } else {                                   
-          aes128_load_dec_only(key_schedule_fast);
+        } else {                     
+          aes128_load_key(KeyThread, key_schedule_fast);          
           Ciphertext128 = aes128_dec_fast(key_schedule_fast, Input128);
         }        
 
