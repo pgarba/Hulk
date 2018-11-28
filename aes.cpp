@@ -241,12 +241,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
       workers.push_back(std::thread([&]() {      
       __m128i key_schedule_fast[20];
 
-      uint8_t *KeyThread;
-      if (Round != 0) {
-      	KeyThread = (uint8_t *) &key_schedule_fast[10];
-      } else {
-      	KeyThread = (uint8_t *) &key_schedule_fast[0];
-      }
+      uint8_t KeyThread[16];
       memcpy(KeyThread, IKey, 16);
 
       __m128i Expected128 = _mm_loadu_si128((__m128i *) Expected);
@@ -265,10 +260,11 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
         // Attack Round 10 on decryption if needed
         __m128i Ciphertext128;
         if (Round > 0) {     
+          key_schedule_fast[10] = _mm_loadu_si128((const __m128i*) KeyThread);
           KeyExpansionFast(key_schedule_fast);
           aes128_load_dec_only(key_schedule_fast);
           Ciphertext128 = aes128_dec_fast(key_schedule_fast, Input128);
-        } else {                     
+        } else {                               
           aes128_load_key(KeyThread, key_schedule_fast);          
           Ciphertext128 = aes128_dec_fast(key_schedule_fast, Input128);
         }        
@@ -292,6 +288,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
             return;
         }
 
+        // if finished, key was found so end the thread
         if (Finished)
           return;
       }      
