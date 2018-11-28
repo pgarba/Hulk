@@ -2,9 +2,7 @@
 
 Hulk is able to bruteforce missing bytes after a DCA attack on AES with his special ability of AES-NI
 
-Hulk makes use of the AES-NI extension to bruteforce up to 6 missing bytes of AES. If you are lucky to own  
-a Threadripper 1950x, Hulk will use 2 AES-NI engines per core which makes the attack really fast.
-
+Hulk makes use of the AES-NI extension to bruteforce up to 6 missing bytes of AES. 
 
 # Numbers for AES Decryption - Round 10 Key (average)
 
