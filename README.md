@@ -12,7 +12,7 @@ a Threadripper 1950x, Hulk will use 2 AES-NI engines per core which makes the at
 
 4 Byte - 32 bit - aes ni 16 threads : ~0m0,459s  
 5 Byte - 40 bit - aes ni 16 threads : ~1m56,989s  
-6 Byte - 48 bit - aes ni 16 threads : ~7h
+6 Byte - 48 bit - aes ni 16 threads : ~7h  
 7 Byte - 56 bit - aes ni 16 threads : ~74 days
 
 #### Core i7-6700k @ 4ghz (1 AES NI Unit per Core)   
