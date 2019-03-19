@@ -358,9 +358,12 @@ int main(int argc, char **argv) {
 
   if (MissingBytes.size() == 0 && KeyScheduleRound > 0) {
     __m128i key_schedule_fast[20];
+    key_schedule_fast[10] = _mm_loadu_si128((const __m128i*) key);
     KeyExpansionINV_Fast(key_schedule_fast);
+    printf("[*] Round 0 Key     : ");
     memcpy(key, &key_schedule_fast[0], 16);    
-  }
+    phex(key);
+  }  
 
   if (Enc) {    
     EncryptNI(plaintext, key);
