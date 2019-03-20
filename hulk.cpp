@@ -191,7 +191,7 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
     // Encryption Thread
     if (Enc) {
       workers.push_back(std::thread([&]() {            
-      __m128i key_schedule[11];
+      __m128i key_schedule[20];
       
       uint64_t RMin = R.Min;
       uint64_t RMax = R.Max;
@@ -210,8 +210,16 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
           KeyThread[B.Index] = (uint8_t) ((i >> B.Shift));
         }        
                                         
-        aes128_load_key_enc_only(KeyThread, key_schedule);        
-        __m128i Ciphertext128 = aes128_enc_fast(key_schedule, Input128);
+        // Attack Round 10 on decryption if needed
+        __m128i Ciphertext128;
+        if (Round > 0) {     
+          key_schedule[10] = _mm_loadu_si128((const __m128i*) KeyThread);
+          KeyExpansionINV_Fast(key_schedule);          
+          Ciphertext128 = aes128_enc_fast(key_schedule, Input128);
+        } else {                               
+          aes128_load_key_enc_only(KeyThread, key_schedule);          
+          Ciphertext128 = aes128_enc_fast(key_schedule, Input128);
+        } 
 
         // Compare if result found                    
         __m128i neq = _mm_xor_si128(Ciphertext128, Expected128);
@@ -220,8 +228,15 @@ static void BruteforceMissingBytes(const uint8_t Input[16], const uint8_t Expect
             Finished = true;            
 
             printf("[!] T%02i Key found   : ", R.ThreadID);
-            memcpy(IKey, KeyThread, 16);
-            phex(IKey);                          
+            if (Round > 0) {
+              memcpy(IKey, &key_schedule[0], 16);
+              phex(IKey);   
+              printf("[!] Round 10 Key    : ");    
+              phex((uint8_t *) &key_schedule[10]);         
+            } else {
+              memcpy(IKey, KeyThread, 16);
+              phex(IKey);                          
+            }
             return;
           }
 
